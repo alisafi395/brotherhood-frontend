@@ -1,290 +1,345 @@
 // screens/StepScreen1.js
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
   TextInput,
-  Pressable,
+  TouchableOpacity,
   StyleSheet,
-  SafeAreaView,
-  StatusBar,
+  Animated,
+  KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 
-export default function StepScreen1({ navigation }) {
-  const [fullName, setFullName] = useState("");
-  const [ageText, setAgeText] = useState(""); // user can type
-  const [profession, setProfession] = useState("");
-  const [about, setAbout] = useState("");
+const ORANGE = "#FF5500";
 
-  const MIN_AGE = 16;
-  const MAX_AGE = 80;
+export default function StepScreen1({ navigation, route }) {
+  // carry anything forward if you already pass params from Signup
+  const prev = route?.params || {};
 
-  const clampAge = (n) => Math.min(MAX_AGE, Math.max(MIN_AGE, n));
+  const [firstName, setFirstName] = useState(prev.firstName || "");
+  const [age, setAge] = useState(prev.age ? String(prev.age) : "");
+  const [city, setCity] = useState(prev.city || "");
+  const [profession, setProfession] = useState(prev.profession || "");
 
-  const parsedAge = (() => {
-    const n = parseInt(ageText, 10);
-    return Number.isFinite(n) ? n : null;
-  })();
+  const [firstNameFocused, setFirstNameFocused] = useState(false);
+  const [ageFocused, setAgeFocused] = useState(false);
+  const [cityFocused, setCityFocused] = useState(false);
+  const [professionFocused, setProfessionFocused] = useState(false);
 
-  const incAge = () => {
-    const base = parsedAge ?? MIN_AGE;
-    setAgeText(String(clampAge(base + 1)));
-  };
+  // Animation refs
+  const headerFadeAnim = useRef(new Animated.Value(0)).current;
+  const headerSlideAnim = useRef(new Animated.Value(20)).current;
+  const contentFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerSlideAnim = useRef(new Animated.Value(20)).current;
 
-  const decAge = () => {
-    const base = parsedAge ?? MIN_AGE;
-    setAgeText(String(clampAge(base - 1)));
-  };
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-  const onChangeAge = (t) => {
-    const digits = t.replace(/[^\d]/g, "");
-    if (digits === "") return setAgeText("");
-    const n = clampAge(parseInt(digits, 10));
-    setAgeText(String(n));
-  };
+    Animated.timing(contentFadeAnim, {
+      toValue: 1,
+      duration: 400,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
 
-  const canContinue =
-    fullName.trim().length > 0 && !!parsedAge && profession.trim().length > 0;
+    Animated.parallel([
+      Animated.timing(footerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(footerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [headerFadeAnim, headerSlideAnim, contentFadeAnim, footerFadeAnim, footerSlideAnim]);
 
   const goNext = () => {
     navigation.navigate("Step2", {
-      profile: { fullName, age: parsedAge, profession, about },
+      ...prev,
+      firstName,
+      age,
+      city,
+      profession,
     });
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
-      <View style={styles.container}>
-        {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="person" size={18} color="#fff" />
-            <Ionicons
-              name="person-outline"
-              size={18}
-              color="#fff"
-              style={{ marginLeft: -6, opacity: 0.9 }}
-            />
-          </View>
-          <Text style={styles.brand}>Brotherhood</Text>
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={styles.progressBar} />
-          <View style={styles.progressBar} />
-        </View>
-
-        {/* Title */}
-        <Text style={styles.title}>Tell us about yourself</Text>
-        <Text style={styles.subtitle}>
-          Help us personalize your Brotherhood experience
-        </Text>
-
-        {/* Inputs */}
-        <View style={styles.form}>
-          {/* Full Name */}
-          <View style={styles.inputWrap}>
-            <Ionicons name="person-outline" size={20} color={vars.icon} />
-            <TextInput
-              value={fullName}
-              onChangeText={setFullName}
-              placeholder="Full Name"
-              placeholderTextColor={vars.placeholder}
-              style={styles.input}
-              autoCapitalize="words"
-              returnKeyType="next"
-            />
-          </View>
-
-          {/* Age: type or stepper */}
-          <View style={styles.inputWrap}>
-            <Ionicons name="calendar-outline" size={20} color={vars.icon} />
-            <TextInput
-              value={ageText}
-              onChangeText={onChangeAge}
-              placeholder="Age"
-              placeholderTextColor={vars.placeholder}
-              style={styles.input}
-              keyboardType="number-pad"
-              returnKeyType="next"
-              maxLength={2}
-            />
-            <View style={styles.stepper}>
-              <Pressable onPress={incAge} hitSlop={10} style={styles.stepperBtn}>
-                <Ionicons name="chevron-up" size={18} color={vars.icon} />
-              </Pressable>
-              <Pressable onPress={decAge} hitSlop={10} style={styles.stepperBtn}>
-                <Ionicons name="chevron-down" size={18} color={vars.icon} />
-              </Pressable>
-            </View>
-          </View>
-
-          {/* Profession */}
-          <View style={styles.inputWrap}>
-            <Ionicons name="briefcase-outline" size={20} color={vars.icon} />
-            <TextInput
-              value={profession}
-              onChangeText={setProfession}
-              placeholder="Profession"
-              placeholderTextColor={vars.placeholder}
-              style={styles.input}
-              returnKeyType="next"
-            />
-          </View>
-
-          {/* About */}
-          <View style={[styles.inputWrap, styles.textAreaWrap]}>
-            <Ionicons
-              name="document-text-outline"
-              size={20}
-              color={vars.icon}
-              style={{ marginTop: 2 }}
-            />
-            <TextInput
-              value={about}
-              onChangeText={setAbout}
-              placeholder="Tell us a bit about yourself..."
-              placeholderTextColor={vars.placeholder}
-              style={[styles.input, styles.textArea]}
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
-        </View>
-
-        {/* Continue */}
-        <Pressable
-          onPress={goNext}
-          disabled={!canContinue}
-          style={({ pressed }) => [
-            styles.cta,
-            (!canContinue || pressed) && { opacity: !canContinue ? 0.5 : 0.85 },
-          ]}
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+      >
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <Text style={styles.ctaText}>Continue</Text>
-        </Pressable>
+          {/* Header */}
+          <Animated.View
+            style={[
+              styles.header,
+              {
+                opacity: headerFadeAnim,
+                transform: [{ translateY: headerSlideAnim }],
+              },
+            ]}
+          >
+            <Text style={styles.title}>The Basics</Text>
+            <Text style={styles.subtitle}>
+              Just enough to coordinate. No bios, no last name
+            </Text>
+          </Animated.View>
 
-        {/* Skip */}
-        <Pressable onPress={goNext} style={styles.skipBtn}>
-          <Text style={styles.skipText}>Skip for now</Text>
-        </Pressable>
-      </View>
+          {/* Content */}
+          <Animated.View style={[styles.content, { opacity: contentFadeAnim }]}>
+            {/* First Name */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>First Name or Nickname</Text>
+              <View style={[styles.inputContainer, firstNameFocused && styles.inputContainerFocused]}>
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="person-outline"
+                    size={20}
+                    color={firstNameFocused ? ORANGE : "#71717A"}
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Alex"
+                  placeholderTextColor="#52525B"
+                  value={firstName}
+                  onChangeText={setFirstName}
+                  onFocus={() => setFirstNameFocused(true)}
+                  onBlur={() => setFirstNameFocused(false)}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+
+            {/* Age */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Age</Text>
+              <View style={[styles.inputContainer, ageFocused && styles.inputContainerFocused]}>
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="calendar-outline"
+                    size={20}
+                    color={ageFocused ? ORANGE : "#71717A"}
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. 28"
+                  placeholderTextColor="#52525B"
+                  value={age}
+                  onChangeText={setAge}
+                  onFocus={() => setAgeFocused(true)}
+                  onBlur={() => setAgeFocused(false)}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                />
+              </View>
+            </View>
+
+            {/* City */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>City</Text>
+              <View style={[styles.inputContainer, cityFocused && styles.inputContainerFocused]}>
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="location-outline"
+                    size={20}
+                    color={cityFocused ? ORANGE : "#71717A"}
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Austin"
+                  placeholderTextColor="#52525B"
+                  value={city}
+                  onChangeText={setCity}
+                  onFocus={() => setCityFocused(true)}
+                  onBlur={() => setCityFocused(false)}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                />
+              </View>
+            </View>
+
+            {/* Profession (added) */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Profession (or what you do)</Text>
+              <View
+                style={[styles.inputContainer, professionFocused && styles.inputContainerFocused]}
+              >
+                <View style={styles.iconContainer}>
+                  <Ionicons
+                    name="briefcase-outline"
+                    size={20}
+                    color={professionFocused ? ORANGE : "#71717A"}
+                  />
+                </View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="e.g. Student, Sales, Electrician"
+                  placeholderTextColor="#52525B"
+                  value={profession}
+                  onChangeText={setProfession}
+                  onFocus={() => setProfessionFocused(true)}
+                  onBlur={() => setProfessionFocused(false)}
+                  autoCapitalize="words"
+                  autoCorrect={false}
+                  returnKeyType="done"
+                />
+              </View>
+            </View>
+
+            {/* Platform Rules Card */}
+            <View style={styles.rulesCard}>
+              <Text style={styles.rulesTitle}>Platform Rules</Text>
+
+              <View style={styles.rulesList}>
+                <View style={styles.ruleItem}>
+                  <View style={styles.bullet} />
+                  <Text style={styles.ruleText}>No profile photos allowed</Text>
+                </View>
+
+                <View style={styles.ruleItem}>
+                  <View style={styles.bullet} />
+                  <Text style={styles.ruleText}>No last names required</Text>
+                </View>
+
+                <View style={styles.ruleItem}>
+                  <View style={styles.bullet} />
+                  <Text style={styles.ruleText}>No lengthy bios needed</Text>
+                </View>
+              </View>
+            </View>
+          </Animated.View>
+
+          {/* Footer */}
+          <Animated.View
+            style={[
+              styles.footer,
+              { opacity: footerFadeAnim, transform: [{ translateY: footerSlideAnim }] },
+            ]}
+          >
+            <TouchableOpacity style={styles.continueButton} onPress={goNext} activeOpacity={0.9}>
+              <Text style={styles.continueButtonText}>Continue</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
 
-const vars = {
-  bg: "#000000",
-  card: "#1b2433",
-  cardStroke: "rgba(255,255,255,0.10)",
-  placeholder: "rgba(255,255,255,0.35)",
-  text: "rgba(255,255,255,0.90)",
-  sub: "rgba(255,255,255,0.55)",
-  icon: "rgba(255,255,255,0.55)",
-  orange: "#EA7B2B",
-};
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: vars.bg },
-  container: {
-    flex: 1,
-    backgroundColor: vars.bg,
-    paddingHorizontal: 22,
-    paddingTop: 12,
+  safe: { flex: 1, backgroundColor: "#000000" },
+  container: { flex: 1, backgroundColor: "#000000" },
+
+  scrollView: { flex: 1 },
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
   },
 
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  logoCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: vars.orange,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  brand: { color: "#fff", fontSize: 26, fontWeight: "800", letterSpacing: 0.2 },
+  header: { marginBottom: 32 },
+  title: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", marginBottom: 12 },
+  subtitle: { fontSize: 16, color: "#A1A1AA", lineHeight: 24, fontWeight: "600" },
 
-  progressRow: {
-    flexDirection: "row",
-    gap: 18,
-    marginTop: 18,
-    marginBottom: 22,
-  },
-  progressBar: {
-    height: 6,
-    flex: 1,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.20)",
-  },
-  progressActive: { backgroundColor: vars.orange },
+  content: { flex: 1 },
 
-  title: {
-    color: "#fff",
-    fontSize: 36,
-    fontWeight: "800",
-    marginTop: 4,
-    lineHeight: 40,
-  },
-  subtitle: {
-    color: vars.sub,
-    fontSize: 16,
-    marginTop: 10,
-    marginBottom: 24,
-  },
+  inputGroup: { marginBottom: 24 },
+  label: { fontSize: 14, fontWeight: "600", color: "#A1A1AA", marginBottom: 8 },
 
-  form: { gap: 16 },
-
-  inputWrap: {
+  inputContainer: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 12,
-    backgroundColor: vars.card,
+    backgroundColor: "rgba(39, 39, 42, 0.5)",
     borderWidth: 1,
-    borderColor: vars.cardStroke,
-    borderRadius: 999,
-    paddingHorizontal: 18,
-    paddingVertical: Platform.select({ ios: 16, android: 14 }),
+    borderColor: "#27272A",
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 4,
   },
+  inputContainerFocused: {
+    borderColor: ORANGE,
+    backgroundColor: "rgba(39, 39, 42, 0.8)",
+  },
+
+  iconContainer: { marginRight: 12 },
+
   input: {
     flex: 1,
-    color: vars.text,
     fontSize: 16,
+    color: "#FFFFFF",
+    paddingVertical: 12,
+    fontWeight: "600",
   },
 
-  stepper: {
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 2,
+  rulesCard: {
+    backgroundColor: "rgba(39, 39, 42, 0.5)",
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#27272A",
+    marginTop: 8,
   },
-  stepperBtn: {
-    paddingHorizontal: 2,
-    paddingVertical: 2,
+  rulesTitle: { fontSize: 14, fontWeight: "700", color: "#A1A1AA", marginBottom: 12 },
+
+  rulesList: { gap: 8 },
+  ruleItem: { flexDirection: "row", alignItems: "flex-start", gap: 12 },
+
+  bullet: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "#71717A",
+    marginTop: 8,
   },
 
-  textAreaWrap: {
-    borderRadius: 26,
-    alignItems: "flex-start",
-    paddingTop: 16,
-    paddingBottom: 16,
-  },
-  textArea: { minHeight: 110 },
+  ruleText: { flex: 1, fontSize: 14, color: "#71717A", lineHeight: 20, fontWeight: "600" },
 
-  cta: {
-    marginTop: 26,
-    backgroundColor: vars.orange,
-    borderRadius: 999,
+  footer: { marginTop: "auto", paddingTop: 24 },
+
+  continueButton: {
+    backgroundColor: ORANGE,
     paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center",
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
-  ctaText: { color: "#fff", fontSize: 18, fontWeight: "800" },
-
-  skipBtn: { paddingVertical: 14, alignItems: "center" },
-  skipText: { color: "rgba(255,255,255,0.55)", fontSize: 16, fontWeight: "600" },
+  continueButtonText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
 });

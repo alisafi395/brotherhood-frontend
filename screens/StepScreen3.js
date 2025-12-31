@@ -1,285 +1,363 @@
 // screens/StepScreen3.js
-import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  Platform,
-  Image,
-} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
+
+const ORANGE = "#FF5500";
 
 export default function StepScreen3({ navigation, route }) {
-  const {
-    fullName,
-    age,
-    profession,
-    about,
-    interests = [],
-  } = route?.params || {};
+  const prev = route?.params || {};
 
-  const [idImage, setIdImage] = useState(null);
+  const [selectedBlocks, setSelectedBlocks] = useState(prev.timeBlocks || []);
+  const [distance, setDistance] = useState(typeof prev.distance === "number" ? prev.distance : 10);
 
-  const payload = useMemo(
-    () => ({
-      fullName,
-      age,
-      profession,
-      about,
-      interests,
-      governmentIdUri: idImage?.uri || null,
-    }),
-    [fullName, age, profession, about, interests, idImage]
-  );
+  // Animations
+  const headerFadeAnim = useRef(new Animated.Value(0)).current;
+  const headerSlideAnim = useRef(new Animated.Value(20)).current;
+  const timeBlocksFadeAnim = useRef(new Animated.Value(0)).current;
+  const distanceFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerSlideAnim = useRef(new Animated.Value(20)).current;
 
-  const openCamera = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission required",
-        "Camera permission is required to take a photo."
-      );
-      return;
+  const timeBlocks = [
+    { id: "weekday_am", title: "Weekday Mornings", icon: "cafe-outline" },
+    { id: "weekday_pm", title: "Weekday Evenings", icon: "moon-outline" },
+    { id: "weekend_am", title: "Weekend Mornings", icon: "sunny-outline" },
+    { id: "weekend_pm", title: "Weekend Afternoons", icon: "partly-sunny-outline" },
+  ];
+
+  const distances = [5, 10, 20];
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    Animated.timing(timeBlocksFadeAnim, {
+      toValue: 1,
+      duration: 400,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.timing(distanceFadeAnim, {
+      toValue: 1,
+      duration: 400,
+      delay: 300,
+      useNativeDriver: true,
+    }).start();
+
+    Animated.parallel([
+      Animated.timing(footerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(footerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [
+    headerFadeAnim,
+    headerSlideAnim,
+    timeBlocksFadeAnim,
+    distanceFadeAnim,
+    footerFadeAnim,
+    footerSlideAnim,
+  ]);
+
+  const toggleBlock = (id) => {
+    if (selectedBlocks.includes(id)) {
+      setSelectedBlocks(selectedBlocks.filter((b) => b !== id));
+    } else {
+      setSelectedBlocks([...selectedBlocks, id]);
     }
+  };
 
-    const result = await ImagePicker.launchCameraAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      quality: 0.8,
-      allowsEditing: false,
+  // ✅ No blocking checks — always allow finishing
+  const finish = () => {
+    // Pass everything forward if you want it on Home, or go straight to Home.
+    navigation.navigate("Step4", {
+      ...prev,
+      timeBlocks: selectedBlocks,
+      distance,
     });
-
-    if (!result.canceled) {
-      setIdImage(result.assets[0]);
-    }
-  };
-
-  const completeSetup = () => {
-   
-
-    // 🔴 IMPORTANT: replace "Home" with your real route name
-    navigation.navigate("Home", payload);
-  };
-
-  const doLater = () => {
-    navigation.navigate("Home", payload);
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.headerTop}>
-          <View style={styles.logoCircle}>
-            <Ionicons name="person" size={18} color="#fff" />
-            <Ionicons
-              name="person-outline"
-              size={18}
-              color="#fff"
-              style={{ marginLeft: -6, opacity: 0.9 }}
-            />
-          </View>
-          <Text style={styles.brand}>Brotherhood</Text>
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={[styles.progressBar, styles.progressActive]} />
-        </View>
-
-        {/* Title */}
-        <Text style={styles.title}>Verify your identity</Text>
-        <Text style={styles.subtitle}>
-          Help us keep the community safe and authentic
-        </Text>
-
-        {/* Info card */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <View style={styles.shieldWrap}>
-              <Ionicons
-                name="shield-checkmark-outline"
-                size={22}
-                color={vars.orange}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.cardTitle}>Why we verify</Text>
-              <Text style={styles.cardSub}>
-                To ensure a trusted community
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.bullets}>
-            <Text style={styles.bullet}>• Your ID is encrypted and secure</Text>
-            <Text style={styles.bullet}>
-              • We only verify your identity, not store details
-            </Text>
-            <Text style={styles.bullet}>• Verified members get a badge</Text>
-          </View>
-        </View>
-
-        {/* Upload / Camera */}
-        <Pressable
-          onPress={openCamera}
+        <Animated.View
           style={[
-            styles.uploadBox,
-            idImage && styles.uploadBoxPicked,
+            styles.header,
+            { opacity: headerFadeAnim, transform: [{ translateY: headerSlideAnim }] },
           ]}
         >
-          {idImage ? (
-            <Image source={{ uri: idImage.uri }} style={styles.preview} />
-          ) : (
-            <>
-              <View style={styles.uploadIconCircle}>
-                <Ionicons
-                  name="camera-outline"
-                  size={28}
-                  color="rgba(255,255,255,0.75)"
+          <Text style={styles.title}>Availability</Text>
+          <Text style={styles.subtitle}>
+            When and where can you meet? No calendars, just general blocks.
+          </Text>
+        </Animated.View>
+
+        {/* Content */}
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Time Blocks */}
+          <Animated.View style={[styles.section, { opacity: timeBlocksFadeAnim }]}>
+            <Text style={styles.sectionTitle}>TIME BLOCKS</Text>
+
+            <View style={styles.timeBlocksList}>
+              {timeBlocks.map((block) => (
+                <TimeBlockCard
+                  key={block.id}
+                  block={block}
+                  selected={selectedBlocks.includes(block.id)}
+                  onPress={() => toggleBlock(block.id)}
                 />
-              </View>
-              <Text style={styles.uploadTitle}>Upload Government ID</Text>
-              <Text style={styles.uploadSub}>
-                Driver's license, passport, or national ID
-              </Text>
-            </>
-          )}
-        </Pressable>
+              ))}
+            </View>
+          </Animated.View>
 
-        {/* Complete */}
-        <Pressable
-          onPress={completeSetup}
-          style={({ pressed }) => [
-            styles.cta,
-            pressed && { opacity: 0.85 },
+          {/* Distance */}
+          <Animated.View style={[styles.section, { opacity: distanceFadeAnim }]}>
+            <Text style={styles.sectionTitle}>TRAVEL DISTANCE</Text>
+
+            <View style={styles.distanceCard}>
+              <View style={styles.distanceButtons}>
+                {distances.map((d) => (
+                  <TouchableOpacity
+                    key={d}
+                    style={[styles.distanceButton, distance === d && styles.distanceButtonSelected]}
+                    onPress={() => setDistance(d)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.distanceButtonText,
+                        distance === d && styles.distanceButtonTextSelected,
+                      ]}
+                    >
+                      {d}km
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+
+              <Text style={styles.distanceDescription}>
+                Willing to travel up to <Text style={styles.distanceValue}>{distance}km</Text> for
+                meets.
+              </Text>
+            </View>
+          </Animated.View>
+
+          <View style={{ height: 8 }} />
+        </ScrollView>
+
+        {/* Footer */}
+        <Animated.View
+          style={[
+            styles.footer,
+            { opacity: footerFadeAnim, transform: [{ translateY: footerSlideAnim }] },
           ]}
         >
-          <Text style={styles.ctaText}>Complete Setup</Text>
-        </Pressable>
-
-        {/* Later */}
-        <Pressable onPress={doLater} style={styles.laterBtn}>
-          <Text style={styles.laterText}>I'll do this later</Text>
-        </Pressable>
+          <TouchableOpacity style={styles.finishButton} onPress={finish} activeOpacity={0.9}>
+            <Text style={styles.finishButtonText}>Finish Setup</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
 }
 
-const vars = {
-  bg: "#000",
-  card: "#1b2433",
-  cardStroke: "rgba(255,255,255,0.1)",
-  orange: "#EA7B2B",
-};
+function TimeBlockCard({ block, selected, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.timeBlockCard, selected && styles.timeBlockCardSelected]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.timeBlockIcon, selected && styles.timeBlockIconSelected]}>
+        <Ionicons name={block.icon} size={20} color={selected ? ORANGE : "#71717A"} />
+      </View>
+
+      <Text style={[styles.timeBlockTitle, selected && styles.timeBlockTitleSelected]}>
+        {block.title}
+      </Text>
+
+      {selected ? (
+        <View style={styles.checkmark}>
+          <Ionicons name="checkmark" size={14} color="#000" />
+        </View>
+      ) : (
+        <View style={styles.checkmarkGhost} />
+      )}
+    </TouchableOpacity>
+  );
+}
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: vars.bg },
-  container: { flex: 1, paddingHorizontal: 22, paddingTop: 12 },
+  safe: { flex: 1, backgroundColor: "#000000" },
 
-  headerTop: { alignItems: "center", gap: 10 },
-  logoCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: vars.orange,
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "row",
-  },
-  brand: { color: "#fff", fontSize: 28, fontWeight: "800" },
-
-  progressRow: { flexDirection: "row", gap: 14, marginVertical: 22 },
-  progressBar: {
-    height: 6,
+  container: {
     flex: 1,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.2)",
-  },
-  progressActive: { backgroundColor: vars.orange },
-
-  title: { color: "#fff", fontSize: 36, fontWeight: "800" },
-  subtitle: { color: "rgba(255,255,255,0.55)", fontSize: 16, marginTop: 8 },
-
-  card: {
-    marginTop: 22,
-    backgroundColor: vars.card,
-    borderRadius: 26,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: vars.cardStroke,
+    backgroundColor: "#000000",
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
   },
 
-  cardHeader: { flexDirection: "row", gap: 14 },
-  shieldWrap: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: "rgba(234,123,43,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
+  header: { marginBottom: 24 },
+
+  title: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", marginBottom: 12 },
+
+  subtitle: { fontSize: 16, color: "#A1A1AA", lineHeight: 24, fontWeight: "600" },
+
+  scrollView: {
+    flex: 1,
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
   },
 
-  cardTitle: { color: "#fff", fontSize: 20, fontWeight: "800" },
-  cardSub: { color: "rgba(255,255,255,0.55)", marginTop: 2 },
+  scrollContent: { paddingBottom: 16 },
 
-  bullets: { marginTop: 14, gap: 8 },
-  bullet: { color: "rgba(255,255,255,0.75)", fontSize: 16 },
+  section: { marginBottom: 32 },
 
-  uploadBox: {
-    marginTop: 22,
-    borderWidth: 2,
-    borderStyle: "dashed",
-    borderColor: "rgba(255,255,255,0.2)",
-    borderRadius: 26,
-    paddingVertical: 34,
-    alignItems: "center",
-  },
-  uploadBoxPicked: {
-    borderColor: "rgba(234,123,43,0.7)",
-    backgroundColor: "rgba(234,123,43,0.1)",
-  },
-
-  uploadIconCircle: {
-    width: 74,
-    height: 74,
-    borderRadius: 37,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 14,
-  },
-
-  uploadTitle: { color: "#fff", fontSize: 22, fontWeight: "800" },
-  uploadSub: { color: "rgba(255,255,255,0.55)", fontSize: 16, marginTop: 6 },
-
-  preview: {
-    width: "90%",
-    height: 180,
-    borderRadius: 18,
-  },
-
-  cta: {
-    marginTop: "auto",
-    backgroundColor: vars.orange,
-    borderRadius: 999,
-    paddingVertical: Platform.select({ ios: 16, android: 15 }),
-    alignItems: "center",
-  },
-  ctaText: { color: "#fff", fontSize: 18, fontWeight: "800" },
-
-  laterBtn: { paddingVertical: 14, alignItems: "center" },
-  laterText: {
-    color: "rgba(255,255,255,0.55)",
-    fontSize: 16,
+  sectionTitle: {
+    fontSize: 12,
     fontWeight: "700",
+    color: "#A1A1AA",
+    letterSpacing: 1.2,
+    marginBottom: 12,
   },
+
+  timeBlocksList: { gap: 12 },
+
+  timeBlockCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(39, 39, 42, 0.5)",
+    borderWidth: 1,
+    borderColor: "#27272A",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+
+  timeBlockCardSelected: {
+    backgroundColor: "rgba(255, 85, 0, 0.10)",
+    borderColor: ORANGE,
+  },
+
+  timeBlockIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#18181B",
+    borderWidth: 1,
+    borderColor: "#27272A",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  timeBlockIconSelected: {
+    backgroundColor: "rgba(255, 85, 0, 0.15)",
+    borderColor: ORANGE,
+  },
+
+  timeBlockTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
+
+  timeBlockTitleSelected: { color: ORANGE },
+
+  checkmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: ORANGE,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  checkmarkGhost: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#27272A",
+  },
+
+  distanceCard: {
+    backgroundColor: "rgba(39, 39, 42, 0.5)",
+    borderWidth: 1,
+    borderColor: "#27272A",
+    borderRadius: 12,
+    padding: 24,
+  },
+
+  distanceButtons: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 16,
+  },
+
+  distanceButton: {
+    width: 64,
+    height: 40,
+    borderRadius: 8,
+    backgroundColor: "#27272A",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  distanceButtonSelected: { backgroundColor: ORANGE },
+
+  distanceButtonText: { fontSize: 14, fontWeight: "700", color: "#A1A1AA" },
+
+  distanceButtonTextSelected: { color: "#FFFFFF" },
+
+  distanceDescription: {
+    textAlign: "center",
+    fontSize: 14,
+    color: "#A1A1AA",
+    lineHeight: 20,
+    fontWeight: "600",
+  },
+
+  distanceValue: { fontWeight: "900", color: "#FFFFFF" },
+
+  footer: { paddingTop: 24 },
+
+  finishButton: {
+    backgroundColor: ORANGE,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: "center",
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+
+  finishButtonText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
 });

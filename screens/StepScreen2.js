@@ -1,265 +1,258 @@
 // screens/StepScreen2.js
-import React, { useMemo, useState } from "react";
-import {
-  View,
-  Text,
-  Pressable,
-  StyleSheet,
-  SafeAreaView,
-  StatusBar,
-  Alert,
-  ScrollView,
-} from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+
+const ORANGE = "#FF5500";
 
 export default function StepScreen2({ navigation, route }) {
-  // Data from StepScreen1 (passed via navigation params)
-  const { fullName, age, profession, about } = route.params || {};
+  // carry forward data from StepScreen1
+  const prev = route?.params || {};
+  const [selected, setSelected] = useState(prev.goals || []);
 
-  // Mix of long + short labels (at least 3 long)
-  const interests = useMemo(
-    () => [
-      "Entrepreneurship",
-      "Personal Development",
-      "Content Creation",
-      "Fitness",
-      "Business",
-      "Technology",
-      "Sports",
-      "Music",
-      "Travel",
-      "Reading",
-      "Gaming",
-      "Cooking",
-      "Photography",
-      "Art",
-      "Finance",
-      "Health",
-      "Fashion",
-      "Networking",
-      "Meditation",
-      "Outdoors",
-      "Movies",
-      "Podcasts",
-    ],
-    []
-  );
+  // Animations
+  const headerFadeAnim = useRef(new Animated.Value(0)).current;
+  const headerSlideAnim = useRef(new Animated.Value(20)).current;
+  const contentFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerFadeAnim = useRef(new Animated.Value(0)).current;
+  const footerSlideAnim = useRef(new Animated.Value(20)).current;
 
-  const [selected, setSelected] = useState([]);
+  // Matches your MagicPatterns goal list but with Ionicons
+  const goals = [
+    { id: "strength", title: "Strength & Discipline", icon: "barbell-outline" },
+    { id: "character", title: "Character Development", icon: "layers-outline" },
+    { id: "wealth", title: "Wealth Building & Stability", icon: "cash-outline" },
+    { id: "skill", title: "Skill Sharpening & Craft", icon: "build-outline" },
+    { id: "power", title: "Social Power & Presence", icon: "people-outline" },
+    { id: "mental", title: "Mental Strength & Balance", icon: "help-circle-outline" },
+    { id: "ambition", title: "Ambition & High Performance", icon: "trending-up-outline" },
+    { id: "exploration", title: "Exploration & Adventure", icon: "navigate-outline" },
+  ];
 
-  const toggleInterest = (item) => {
-    setSelected((prev) =>
-      prev.includes(item) ? prev.filter((x) => x !== item) : [...prev, item]
-    );
-  };
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(headerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(headerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
 
-  const canContinue = selected.length >= 3;
+    Animated.timing(contentFadeAnim, {
+      toValue: 1,
+      duration: 400,
+      delay: 200,
+      useNativeDriver: true,
+    }).start();
 
-  const goNext = () => {
-    if (!canContinue) {
-      Alert.alert("Pick at least 3", "Select at least 3 interests to continue.");
-      return;
+    Animated.parallel([
+      Animated.timing(footerFadeAnim, {
+        toValue: 1,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+      Animated.timing(footerSlideAnim, {
+        toValue: 0,
+        duration: 400,
+        delay: 400,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [headerFadeAnim, headerSlideAnim, contentFadeAnim, footerFadeAnim, footerSlideAnim]);
+
+  const toggleGoal = (id) => {
+    if (selected.includes(id)) {
+      setSelected(selected.filter((i) => i !== id));
+    } else {
+      if (selected.length < 5) setSelected([...selected, id]);
     }
-
-    // Change this route name to your real next step / home route
-    navigation.navigate("Step3", {
-      fullName,
-      age,
-      profession,
-      about,
-      interests: selected,
-    });
   };
 
-  const skip = () => {
-    navigation.navigate("Home", {
-      fullName,
-      age,
-      profession,
-      about,
-      interests: [],
+  // ✅ per your latest request: no checks to block navigation
+  const goNext = () => {
+    navigation.navigate("Step3", {
+      ...prev,
+      goals: selected,
     });
   };
 
   return (
-    <SafeAreaView style={styles.safe}>
-      <StatusBar barStyle="light-content" />
-
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.headerRow}>
-          <View style={styles.logoCircle} />
-          <Text style={styles.brand}>Brotherhood</Text>
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressRow}>
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={[styles.progressBar, styles.progressActive]} />
-          <View style={styles.progressBar} />
-        </View>
-
-        {/* Content (scrollable) */}
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <Animated.View
+          style={[
+            styles.header,
+            { opacity: headerFadeAnim, transform: [{ translateY: headerSlideAnim }] },
+          ]}
         >
-          <Text style={styles.title}>What are your interests?</Text>
-          <Text style={styles.subtitle}>
-            Select at least 3 to connect with like-minded brothers
-          </Text>
+          <Text style={styles.title}>Your Goals</Text>
+          <Text style={styles.subtitle}>Select 3-5 action-based interests to power matching.</Text>
+        </Animated.View>
 
-          {/* Chips */}
-          <View style={styles.chipsWrap}>
-            {interests.map((item) => {
-              const isOn = selected.includes(item);
-              const isLong = item.length >= 12;
-
-              // Long chips get more minimum width so 3 long ones can sit in a row.
-              // Short chips get smaller min width so up to ~4 can sit in a row.
-              const chipSizing = isLong ? styles.chipLong : styles.chipShort;
-
-              return (
-                <Pressable
-                  key={item}
-                  onPress={() => toggleInterest(item)}
-                  style={({ pressed }) => [
-                    styles.chip,
-                    chipSizing,
-                    isOn && styles.chipActive,
-                    pressed && { opacity: 0.9 },
-                  ]}
-                >
-                  <Text style={[styles.chipText, isOn && styles.chipTextActive]}>
-                    {item}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </View>
-        </ScrollView>
-
-        {/* Bottom actions (sticky) */}
-        <View style={styles.bottom}>
-          <Pressable
-            onPress={goNext}
-            style={({ pressed }) => [
-              styles.cta,
-              (!canContinue || pressed) && { opacity: !canContinue ? 0.55 : 0.85 },
-            ]}
+        {/* Goals List */}
+        <Animated.View style={[styles.scrollContainer, { opacity: contentFadeAnim }]}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.ctaText}>Continue</Text>
-          </Pressable>
+            {goals.map((goal) => (
+              <GoalCard
+                key={goal.id}
+                goal={goal}
+                selected={selected.includes(goal.id)}
+                onPress={() => toggleGoal(goal.id)}
+              />
+            ))}
 
-          <Pressable onPress={skip} style={styles.skipBtn}>
-            <Text style={styles.skipText}>Skip for now</Text>
-          </Pressable>
-        </View>
+            <View style={{ height: 8 }} />
+          </ScrollView>
+        </Animated.View>
+
+        {/* Footer */}
+        <Animated.View
+          style={[
+            styles.footer,
+            { opacity: footerFadeAnim, transform: [{ translateY: footerSlideAnim }] },
+          ]}
+        >
+          <TouchableOpacity style={styles.continueButton} onPress={goNext} activeOpacity={0.9}>
+            <Text style={styles.continueButtonText}>Continue</Text>
+          </TouchableOpacity>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
 }
 
-const vars = {
-  bg: "#000000",
-  card: "#1b2433",
-  cardStroke: "rgba(255,255,255,0.10)",
-  text: "rgba(255,255,255,0.90)",
-  sub: "rgba(255,255,255,0.55)",
-  chipText: "rgba(255,255,255,0.80)",
-  orange: "#EA7B2B",
-};
+function GoalCard({ goal, selected, onPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.goalCard, selected && styles.goalCardSelected]}
+      onPress={onPress}
+      activeOpacity={0.7}
+    >
+      <View style={[styles.iconContainer, selected && styles.iconContainerSelected]}>
+        <Ionicons name={goal.icon} size={20} color={selected ? ORANGE : "#71717A"} />
+      </View>
+
+      <Text style={[styles.goalTitle, selected && styles.goalTitleSelected]}>{goal.title}</Text>
+
+      {selected ? (
+        <View style={styles.checkmark}>
+          <Ionicons name="checkmark" size={14} color="#000" />
+        </View>
+      ) : (
+        <View style={styles.checkmarkGhost} />
+      )}
+    </TouchableOpacity>
+  );
+}
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: vars.bg },
+  safe: { flex: 1, backgroundColor: "#000000" },
+
   container: {
     flex: 1,
-    backgroundColor: vars.bg,
-    paddingHorizontal: 22,
-    paddingTop: 12,
+    backgroundColor: "#000000",
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 24,
   },
 
-  headerRow: { flexDirection: "row", alignItems: "center", gap: 12 },
-  logoCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: vars.orange,
-  },
-  brand: { color: "#fff", fontSize: 26, fontWeight: "800", letterSpacing: 0.2 },
+  header: { marginBottom: 24 },
 
-  progressRow: { flexDirection: "row", gap: 18, marginTop: 18, marginBottom: 18 },
-  progressBar: {
-    height: 6,
+  title: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", marginBottom: 12 },
+
+  subtitle: { fontSize: 16, color: "#A1A1AA", lineHeight: 24, fontWeight: "600" },
+
+  scrollContainer: {
     flex: 1,
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.20)",
-  },
-  progressActive: { backgroundColor: vars.orange },
-
-  scrollContent: {
-    paddingBottom: 18,
+    marginHorizontal: -24,
+    paddingHorizontal: 24,
   },
 
-  title: {
-    color: "#fff",
-    fontSize: 34,
-    fontWeight: "800",
-    lineHeight: 38,
-    marginTop: 6,
-  },
-  subtitle: { color: vars.sub, fontSize: 16, marginTop: 10, marginBottom: 18 },
+  scrollView: { flex: 1 },
 
-  chipsWrap: {
+  scrollContent: { paddingBottom: 16, gap: 12 },
+
+  goalCard: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-    marginTop: 8,
-  },
-
-  chip: {
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 999,
-    backgroundColor: vars.card,
+    alignItems: "center",
+    backgroundColor: "rgba(39, 39, 42, 0.5)",
     borderWidth: 1,
-    borderColor: vars.cardStroke,
+    borderColor: "#27272A",
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+  },
+
+  goalCardSelected: {
+    backgroundColor: "rgba(255, 85, 0, 0.10)",
+    borderColor: ORANGE,
+  },
+
+  iconContainer: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: "#18181B",
+    borderWidth: 1,
+    borderColor: "#27272A",
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+
+  iconContainerSelected: {
+    backgroundColor: "rgba(255, 85, 0, 0.15)",
+    borderColor: ORANGE,
+  },
+
+  goalTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
+
+  goalTitleSelected: { color: ORANGE },
+
+  checkmark: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: ORANGE,
     alignItems: "center",
     justifyContent: "center",
   },
 
-  // ---- sizing rules to influence wrapping ----
-  // Long labels: aim for 3 per row (roughly)
-  chipLong: {
-    minWidth: "31%", // 3-ish across with gaps on typical phones
-  },
-  // Short labels: aim for 4 per row (roughly)
-  chipShort: {
-    minWidth: "22%", // 4-ish across with gaps on typical phones
-  },
-
-  chipActive: {
-    backgroundColor: "rgba(234, 123, 43, 0.18)",
-    borderColor: "rgba(234, 123, 43, 0.55)",
-  },
-  chipText: { color: vars.chipText, fontSize: 16, fontWeight: "700" },
-  chipTextActive: { color: "#fff" },
-
-  bottom: {
-    paddingTop: 10,
-    paddingBottom: 6,
-    backgroundColor: vars.bg,
+  checkmarkGhost: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#27272A",
   },
 
-  cta: {
-    backgroundColor: vars.orange,
-    borderRadius: 999,
+  footer: { paddingTop: 24 },
+
+  continueButton: {
+    backgroundColor: ORANGE,
     paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
     alignItems: "center",
-    justifyContent: "center",
+    shadowColor: ORANGE,
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
   },
-  ctaText: { color: "#fff", fontSize: 18, fontWeight: "800" },
 
-  skipBtn: { paddingVertical: 14, alignItems: "center" },
-  skipText: { color: "rgba(255,255,255,0.55)", fontSize: 16, fontWeight: "600" },
+  continueButtonText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
 });
