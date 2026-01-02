@@ -7,9 +7,11 @@ import { Ionicons } from "@expo/vector-icons";
 const ORANGE = "#FF5500";
 
 export default function StepScreen2({ navigation, route }) {
-  // carry forward data from StepScreen1
-  const prev = route?.params || {};
-  const [selected, setSelected] = useState(prev.goals || []);
+  // ✅ RECEIVE consistent object from StepScreen1
+  const prevData = route?.params?.formData || {};
+
+  // ✅ init from prevData so going back keeps selections
+  const [selected, setSelected] = useState(Array.isArray(prevData.goals) ? prevData.goals : []);
 
   // Animations
   const headerFadeAnim = useRef(new Animated.Value(0)).current;
@@ -18,7 +20,6 @@ export default function StepScreen2({ navigation, route }) {
   const footerFadeAnim = useRef(new Animated.Value(0)).current;
   const footerSlideAnim = useRef(new Animated.Value(20)).current;
 
-  // Matches your MagicPatterns goal list but with Ionicons
   const goals = [
     { id: "strength", title: "Strength & Discipline", icon: "barbell-outline" },
     { id: "character", title: "Character Development", icon: "layers-outline" },
@@ -32,16 +33,8 @@ export default function StepScreen2({ navigation, route }) {
 
   useEffect(() => {
     Animated.parallel([
-      Animated.timing(headerFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(headerSlideAnim, {
-        toValue: 0,
-        duration: 400,
-        useNativeDriver: true,
-      }),
+      Animated.timing(headerFadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+      Animated.timing(headerSlideAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
     ]).start();
 
     Animated.timing(contentFadeAnim, {
@@ -52,35 +45,31 @@ export default function StepScreen2({ navigation, route }) {
     }).start();
 
     Animated.parallel([
-      Animated.timing(footerFadeAnim, {
-        toValue: 1,
-        duration: 400,
-        delay: 400,
-        useNativeDriver: true,
-      }),
-      Animated.timing(footerSlideAnim, {
-        toValue: 0,
-        duration: 400,
-        delay: 400,
-        useNativeDriver: true,
-      }),
+      Animated.timing(footerFadeAnim, { toValue: 1, duration: 400, delay: 400, useNativeDriver: true }),
+      Animated.timing(footerSlideAnim, { toValue: 0, duration: 400, delay: 400, useNativeDriver: true }),
     ]).start();
   }, [headerFadeAnim, headerSlideAnim, contentFadeAnim, footerFadeAnim, footerSlideAnim]);
 
   const toggleGoal = (id) => {
-    if (selected.includes(id)) {
-      setSelected(selected.filter((i) => i !== id));
-    } else {
-      if (selected.length < 5) setSelected([...selected, id]);
-    }
+    setSelected((prevSelected) => {
+      if (prevSelected.includes(id)) return prevSelected.filter((i) => i !== id);
+      if (prevSelected.length < 5) return [...prevSelected, id];
+      return prevSelected;
+    });
   };
 
-  // ✅ per your latest request: no checks to block navigation
   const goNext = () => {
-    navigation.navigate("Step3", {
-      ...prev,
+    // ✅ MERGE prevData + this screen data
+    const nextFormData = {
+      ...prevData,
       goals: selected,
-    });
+    };
+
+    console.log("✅ Step2 received formData:", prevData);
+    console.log("✅ Step2 -> Step3 sending formData:", nextFormData);
+
+    // ✅ FORWARD in the same consistent wrapper
+    navigation.navigate("Step3", { formData: nextFormData });
   };
 
   return (
@@ -169,19 +158,11 @@ const styles = StyleSheet.create({
   },
 
   header: { marginBottom: 24 },
-
   title: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", marginBottom: 12 },
-
   subtitle: { fontSize: 16, color: "#A1A1AA", lineHeight: 24, fontWeight: "600" },
 
-  scrollContainer: {
-    flex: 1,
-    marginHorizontal: -24,
-    paddingHorizontal: 24,
-  },
-
+  scrollContainer: { flex: 1, marginHorizontal: -24, paddingHorizontal: 24 },
   scrollView: { flex: 1 },
-
   scrollContent: { paddingBottom: 16, gap: 12 },
 
   goalCard: {
@@ -195,10 +176,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
 
-  goalCardSelected: {
-    backgroundColor: "rgba(255, 85, 0, 0.10)",
-    borderColor: ORANGE,
-  },
+  goalCardSelected: { backgroundColor: "rgba(255, 85, 0, 0.10)", borderColor: ORANGE },
 
   iconContainer: {
     width: 40,
@@ -212,13 +190,9 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
 
-  iconContainerSelected: {
-    backgroundColor: "rgba(255, 85, 0, 0.15)",
-    borderColor: ORANGE,
-  },
+  iconContainerSelected: { backgroundColor: "rgba(255, 85, 0, 0.15)", borderColor: ORANGE },
 
   goalTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
-
   goalTitleSelected: { color: ORANGE },
 
   checkmark: {

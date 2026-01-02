@@ -22,7 +22,6 @@ export default function AuthStack() {
       <Stack.Screen name="Step1" component={StepScreen1} />
       <Stack.Screen name="Step2" component={StepScreen2} />
       <Stack.Screen name="Step3" component={StepScreen3} />
-      <Stack.Screen name="Step4" component={StepScreen4} />
       <Stack.Screen name="Home" component={HomeScreen} />
     </Stack.Navigator>
   );

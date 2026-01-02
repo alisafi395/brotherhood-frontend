@@ -1,16 +1,39 @@
-// screens/StepScreen3.js
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TouchableOpacity, StyleSheet, Animated, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  ScrollView,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { useUser } from "../context/UserContext";
+
+// ✅ correct hook import
+import { useSignup } from "../hooks/useSignup";
 
 const ORANGE = "#FF5500";
 
 export default function StepScreen3({ navigation, route }) {
-  const prev = route?.params || {};
+  // ✅ consistent wrapper
+  const prevData = route?.params?.formData || {};
+  const { setUserFromLoginResponse } = useUser();
 
-  const [selectedBlocks, setSelectedBlocks] = useState(prev.timeBlocks || []);
-  const [distance, setDistance] = useState(typeof prev.distance === "number" ? prev.distance : 10);
+
+  const [selectedBlocks, setSelectedBlocks] = useState(
+    Array.isArray(prevData.timeBlocks) ? prevData.timeBlocks : []
+  );
+
+  const [distance, setDistance] = useState(
+    typeof prevData.distance === "number" ? prevData.distance : 10
+  );
+
+  // ✅ signup hook
+  const { signupUser, loading, error } = useSignup();
 
   // Animations
   const headerFadeAnim = useRef(new Animated.Value(0)).current;
@@ -71,32 +94,41 @@ export default function StepScreen3({ navigation, route }) {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [
-    headerFadeAnim,
-    headerSlideAnim,
-    timeBlocksFadeAnim,
-    distanceFadeAnim,
-    footerFadeAnim,
-    footerSlideAnim,
-  ]);
+  }, []);
 
   const toggleBlock = (id) => {
-    if (selectedBlocks.includes(id)) {
-      setSelectedBlocks(selectedBlocks.filter((b) => b !== id));
-    } else {
-      setSelectedBlocks([...selectedBlocks, id]);
-    }
+    setSelectedBlocks((prev) =>
+      prev.includes(id) ? prev.filter((b) => b !== id) : [...prev, id]
+    );
   };
 
-  // ✅ No blocking checks — always allow finishing
-  const finish = () => {
-    // Pass everything forward if you want it on Home, or go straight to Home.
-    navigation.navigate("Step4", {
-      ...prev,
-      timeBlocks: selectedBlocks,
-      distance,
-    });
+
+
+  const finish = async () => {
+  const finalPayload = {
+    ...prevData,
+    availabilityBlocks: selectedBlocks,
+    travelDistance: distance,
   };
+
+  console.log("✅ Final signup payload:", finalPayload);
+
+  try {
+    const data = await signupUser(finalPayload); 
+    setUserFromLoginResponse(data);
+
+    navigation.reset({
+      index: 0,
+      routes: [{ name: "Home" }],
+    });
+  } catch (err) {
+    Alert.alert(
+      "Signup failed",
+      err?.message || error || "Something went wrong"
+    );
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
@@ -124,16 +156,14 @@ export default function StepScreen3({ navigation, route }) {
           <Animated.View style={[styles.section, { opacity: timeBlocksFadeAnim }]}>
             <Text style={styles.sectionTitle}>TIME BLOCKS</Text>
 
-            <View style={styles.timeBlocksList}>
-              {timeBlocks.map((block) => (
-                <TimeBlockCard
-                  key={block.id}
-                  block={block}
-                  selected={selectedBlocks.includes(block.id)}
-                  onPress={() => toggleBlock(block.id)}
-                />
-              ))}
-            </View>
+            {timeBlocks.map((block) => (
+              <TimeBlockCard
+                key={block.id}
+                block={block}
+                selected={selectedBlocks.includes(block.id)}
+                onPress={() => toggleBlock(block.id)}
+              />
+            ))}
           </Animated.View>
 
           {/* Distance */}
@@ -145,9 +175,12 @@ export default function StepScreen3({ navigation, route }) {
                 {distances.map((d) => (
                   <TouchableOpacity
                     key={d}
-                    style={[styles.distanceButton, distance === d && styles.distanceButtonSelected]}
+                    style={[
+                      styles.distanceButton,
+                      distance === d && styles.distanceButtonSelected,
+                    ]}
                     onPress={() => setDistance(d)}
-                    activeOpacity={0.7}
+                    disabled={loading}
                   >
                     <Text
                       style={[
@@ -162,13 +195,11 @@ export default function StepScreen3({ navigation, route }) {
               </View>
 
               <Text style={styles.distanceDescription}>
-                Willing to travel up to <Text style={styles.distanceValue}>{distance}km</Text> for
-                meets.
+                Willing to travel up to{" "}
+                <Text style={styles.distanceValue}>{distance}km</Text> for meets.
               </Text>
             </View>
           </Animated.View>
-
-          <View style={{ height: 8 }} />
         </ScrollView>
 
         {/* Footer */}
@@ -178,14 +209,25 @@ export default function StepScreen3({ navigation, route }) {
             { opacity: footerFadeAnim, transform: [{ translateY: footerSlideAnim }] },
           ]}
         >
-          <TouchableOpacity style={styles.finishButton} onPress={finish} activeOpacity={0.9}>
-            <Text style={styles.finishButtonText}>Finish Setup</Text>
+          <TouchableOpacity
+            style={styles.finishButton}
+            onPress={finish}
+            activeOpacity={0.9}
+            disabled={loading}
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFF" />
+            ) : (
+              <Text style={styles.finishButtonText}>Finish Setup</Text>
+            )}
           </TouchableOpacity>
         </Animated.View>
       </View>
     </SafeAreaView>
   );
 }
+
+/* ---------- Card Component ---------- */
 
 function TimeBlockCard({ block, selected, onPress }) {
   return (
@@ -195,7 +237,11 @@ function TimeBlockCard({ block, selected, onPress }) {
       activeOpacity={0.7}
     >
       <View style={[styles.timeBlockIcon, selected && styles.timeBlockIconSelected]}>
-        <Ionicons name={block.icon} size={20} color={selected ? ORANGE : "#71717A"} />
+        <Ionicons
+          name={block.icon}
+          size={20}
+          color={selected ? ORANGE : "#71717A"}
+        />
       </View>
 
       <Text style={[styles.timeBlockTitle, selected && styles.timeBlockTitleSelected]}>
@@ -213,33 +259,23 @@ function TimeBlockCard({ block, selected, onPress }) {
   );
 }
 
-const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: "#000000" },
+/* ---------- Styles ---------- */
 
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "#000" },
   container: {
     flex: 1,
-    backgroundColor: "#000000",
+    backgroundColor: "#000",
     paddingHorizontal: 24,
     paddingTop: 32,
     paddingBottom: 24,
   },
-
   header: { marginBottom: 24 },
-
-  title: { fontSize: 32, fontWeight: "900", color: "#FFFFFF", marginBottom: 12 },
-
+  title: { fontSize: 32, fontWeight: "900", color: "#FFF", marginBottom: 12 },
   subtitle: { fontSize: 16, color: "#A1A1AA", lineHeight: 24, fontWeight: "600" },
-
-  scrollView: {
-    flex: 1,
-    marginHorizontal: -24,
-    paddingHorizontal: 24,
-  },
-
+  scrollView: { flex: 1, marginHorizontal: -24, paddingHorizontal: 24 },
   scrollContent: { paddingBottom: 16 },
-
   section: { marginBottom: 32 },
-
   sectionTitle: {
     fontSize: 12,
     fontWeight: "700",
@@ -247,46 +283,34 @@ const styles = StyleSheet.create({
     letterSpacing: 1.2,
     marginBottom: 12,
   },
-
-  timeBlocksList: { gap: 12 },
-
   timeBlockCard: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "rgba(39, 39, 42, 0.5)",
+    backgroundColor: "rgba(39,39,42,0.5)",
     borderWidth: 1,
     borderColor: "#27272A",
     borderRadius: 12,
     padding: 16,
     marginBottom: 12,
   },
-
   timeBlockCardSelected: {
-    backgroundColor: "rgba(255, 85, 0, 0.10)",
+    backgroundColor: "rgba(255,85,0,0.1)",
     borderColor: ORANGE,
   },
-
   timeBlockIcon: {
     width: 40,
     height: 40,
     borderRadius: 10,
     backgroundColor: "#18181B",
-    borderWidth: 1,
-    borderColor: "#27272A",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
   },
-
   timeBlockIconSelected: {
-    backgroundColor: "rgba(255, 85, 0, 0.15)",
-    borderColor: ORANGE,
+    backgroundColor: "rgba(255,85,0,0.15)",
   },
-
-  timeBlockTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFFFFF" },
-
+  timeBlockTitle: { flex: 1, fontSize: 16, fontWeight: "700", color: "#FFF" },
   timeBlockTitleSelected: { color: ORANGE },
-
   checkmark: {
     width: 20,
     height: 20,
@@ -295,30 +319,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   checkmarkGhost: {
     width: 20,
     height: 20,
     borderRadius: 10,
-    backgroundColor: "transparent",
     borderWidth: 1,
     borderColor: "#27272A",
   },
-
   distanceCard: {
-    backgroundColor: "rgba(39, 39, 42, 0.5)",
+    backgroundColor: "rgba(39,39,42,0.5)",
     borderWidth: 1,
     borderColor: "#27272A",
     borderRadius: 12,
     padding: 24,
   },
-
   distanceButtons: {
     flexDirection: "row",
     justifyContent: "space-between",
     marginBottom: 16,
   },
-
   distanceButton: {
     width: 64,
     height: 40,
@@ -327,37 +346,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-
   distanceButtonSelected: { backgroundColor: ORANGE },
-
   distanceButtonText: { fontSize: 14, fontWeight: "700", color: "#A1A1AA" },
-
-  distanceButtonTextSelected: { color: "#FFFFFF" },
-
+  distanceButtonTextSelected: { color: "#FFF" },
   distanceDescription: {
     textAlign: "center",
     fontSize: 14,
     color: "#A1A1AA",
-    lineHeight: 20,
     fontWeight: "600",
   },
-
-  distanceValue: { fontWeight: "900", color: "#FFFFFF" },
-
+  distanceValue: { fontWeight: "900", color: "#FFF" },
   footer: { paddingTop: 24 },
-
   finishButton: {
     backgroundColor: ORANGE,
     paddingVertical: 16,
-    paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: "center",
-    shadowColor: ORANGE,
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.3,
-    shadowRadius: 15,
-    elevation: 8,
   },
-
-  finishButtonText: { fontSize: 16, fontWeight: "800", color: "#FFFFFF" },
+  finishButtonText: { fontSize: 16, fontWeight: "800", color: "#FFF" },
 });

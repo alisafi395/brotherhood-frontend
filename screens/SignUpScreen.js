@@ -1,4 +1,3 @@
-// screens/SignupScreen.js
 import React, { useEffect, useRef, useState } from "react";
 import {
   View,
@@ -67,9 +66,25 @@ export default function SignupScreen({ navigation }) {
     ]).start();
   }, [headerFadeAnim, headerSlideAnim, contentFadeAnim, footerFadeAnim, footerSlideAnim]);
 
-  // ✅ No checks. Always navigate forward.
+  // ✅ Pass info as route params
   const goNext = () => {
-    navigation.navigate("Step1");
+  navigation.navigate("Step1", {
+    formData: {
+      email,
+      password,
+      provider: "email",
+    },
+  });
+};
+
+
+  // Example: if you want Google to also go forward for now
+  const goNextGoogle = () => {
+    navigation.navigate("Step1", {
+      email: "",
+      password: "",
+      provider: "google",
+    });
   };
 
   return (
@@ -102,7 +117,7 @@ export default function SignupScreen({ navigation }) {
           {/* Content */}
           <Animated.View style={[styles.content, { opacity: contentFadeAnim }]}>
             {/* Google button */}
-            <TouchableOpacity style={styles.googleButton} onPress={goNext} activeOpacity={0.85}>
+            <TouchableOpacity style={styles.googleButton} onPress={goNextGoogle} activeOpacity={0.85}>
               <Ionicons name="logo-google" size={20} color="#000" />
               <Text style={styles.googleButtonText}>Continue with Google</Text>
             </TouchableOpacity>
@@ -138,9 +153,7 @@ export default function SignupScreen({ navigation }) {
 
             {/* Password */}
             <View style={styles.inputWrapper}>
-              <View
-                style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}
-              >
+              <View style={[styles.inputContainer, passwordFocused && styles.inputContainerFocused]}>
                 <View style={styles.iconContainer}>
                   <Ionicons
                     name="lock-closed-outline"
@@ -184,7 +197,6 @@ export default function SignupScreen({ navigation }) {
               { opacity: footerFadeAnim, transform: [{ translateY: footerSlideAnim }] },
             ]}
           >
-            {/* ✅ No checks. Always navigate forward. */}
             <TouchableOpacity style={styles.createButton} onPress={goNext} activeOpacity={0.9}>
               <Text style={styles.createButtonText}>Create Account</Text>
             </TouchableOpacity>
